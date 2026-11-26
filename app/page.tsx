@@ -1,67 +1,155 @@
+import { Suspense } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { BookOpen, Sparkles, Target } from "lucide-react";
+import { WovenDivider } from "@/components/ui/Primitives";
+import { getDefaultHomeByRole, getSessionUser } from "@/lib/auth/session";
 
-export default function Home() {
+async function LandingActions() {
+  const user = await getSessionUser();
+
+  if (user) {
+    const dest = getDefaultHomeByRole(user.role);
+    return (
+      <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md mx-auto">
+        <Link
+          href={dest}
+          className="flex-1 inline-flex items-center justify-center min-h-[50px] px-6 rounded-control bg-brand text-white font-bold text-base tactile-btn tactile-brand"
+        >
+          Lanjutkan sebagai {user.fullName.split(" ")[0]}
+        </Link>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md mx-auto">
+      <Link
+        href="/register"
+        className="flex-1 inline-flex items-center justify-center min-h-[50px] px-6 rounded-control bg-brand text-white font-bold text-base tactile-btn tactile-brand"
+      >
+        MULAI BELAJAR
+      </Link>
+      <Link
+        href="/login"
+        className="flex-1 inline-flex items-center justify-center min-h-[50px] px-6 rounded-control bg-surface text-ink border-2 border-border-control font-bold text-base hover:bg-surface-soft tactile-btn tactile-neutral"
+      >
+        SUDAH PUNYA AKUN
+      </Link>
+    </div>
+  );
+}
+
+export default function LandingPage() {
+  return (
+    <div className="min-h-screen bg-canvas text-ink flex flex-col">
+      <header className="w-full border-b border-border-subtle bg-surface/80 backdrop-blur-xs">
+        <div className="max-w-5xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5">
             <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+              src="/images/pasanku_app_icon.png"
+              alt="Pasanku"
+              width={36}
+              height={36}
+              className="rounded-chip"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <span className="font-display font-extrabold text-xl tracking-tight text-ink">
+              PASANKU
+            </span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center min-h-[40px] px-4 rounded-control text-sm font-bold text-ink hover:bg-surface-soft"
+            >
+              Masuk
+            </Link>
+            <Link
+              href="/register"
+              className="inline-flex items-center justify-center min-h-[40px] px-4 rounded-control bg-brand text-white text-sm font-bold tactile-btn tactile-brand"
+            >
+              Daftar
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 flex flex-col justify-center px-4 py-10 md:py-16">
+        <div className="max-w-3xl mx-auto w-full text-center space-y-6">
+          <div className="flex justify-center">
+            <Image
+              src="/images/pasanku_logo_cream.png"
+              alt="Maskot ayam jago Pasanku berselendang tenun Pasan"
+              width={210}
+              height={198}
+              priority
+              className="h-auto w-44 md:w-52"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-brand">
+              Bahasa kita, warisan kita.
+            </p>
+            <h1 className="font-display text-3xl md:text-5xl font-extrabold text-ink leading-tight">
+              Belajar Bahasa Pasan Langkah demi Langkah
+            </h1>
+            <p className="text-base md:text-lg text-ink-soft max-w-xl mx-auto">
+              Pelajaran singkat, latihan interaktif, evaluasi unit, dan
+              rekomendasi remedial adaptif untuk pemula Bahasa Pasan di Ratahan.
+            </p>
+          </div>
+
+          <WovenDivider />
+
+          <Suspense
+            fallback={
+              <div className="h-[50px] max-w-md mx-auto rounded-control bg-surface-soft animate-pulse" />
+            }
           >
-            Documentation
-          </a>
+            <LandingActions />
+          </Suspense>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 text-left">
+            <div className="bg-surface border border-border-subtle rounded-card p-5 space-y-2">
+              <div className="w-10 h-10 rounded-control bg-surface-highlight flex items-center justify-center text-brand">
+                <BookOpen className="w-5 h-5" aria-hidden="true" />
+              </div>
+              <h2 className="font-display font-bold text-base text-ink">
+                Microlearning Bertahap
+              </h2>
+              <p className="text-sm text-ink-soft">
+                5 unit dengan 25 lesson singkat yang langsung dipraktikkan lewat
+                latihan.
+              </p>
+            </div>
+
+            <div className="bg-surface border border-border-subtle rounded-card p-5 space-y-2">
+              <div className="w-10 h-10 rounded-control bg-accent-tint flex items-center justify-center text-accent-lip">
+                <Target className="w-5 h-5" aria-hidden="true" />
+              </div>
+              <h2 className="font-display font-bold text-base text-ink">
+                Remedial Adaptif
+              </h2>
+              <p className="text-sm text-ink-soft">
+                Analisis otomatis kesalahan quiz unit untuk merekomendasikan
+                lesson prioritas.
+              </p>
+            </div>
+
+            <div className="bg-surface border border-border-subtle rounded-card p-5 space-y-2">
+              <div className="w-10 h-10 rounded-control bg-success-tint flex items-center justify-center text-success">
+                <Sparkles className="w-5 h-5" aria-hidden="true" />
+              </div>
+              <h2 className="font-display font-bold text-base text-ink">
+                Tervalidasi Penutur
+              </h2>
+              <p className="text-sm text-ink-soft">
+                Kosakata dan kunci jawaban diperiksa Validator sebelum terbit ke
+                Learner.
+              </p>
+            </div>
+          </div>
         </div>
       </main>
     </div>

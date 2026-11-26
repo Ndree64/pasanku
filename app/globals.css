@@ -1,26 +1,127 @@
 @import "tailwindcss";
 
+@theme {
+  --color-canvas: #FFF9F0;
+  --color-surface: #FFFFFF;
+  --color-surface-soft: #FAF2E6;
+  --color-surface-highlight: #FDF3E3;
+  --color-border-subtle: #EFE4D4;
+  --color-border-control: #D9C5AD;
+  --color-ink: #4A1F0C;
+  --color-ink-soft: #6E4735;
+  --color-brand: #C92A2A;
+  --color-brand-lip: #9E1F1F;
+  --color-brand-tint: #FDF0F0;
+  --color-accent: #F5A623;
+  --color-accent-lip: #B36B00;
+  --color-accent-border: #C97E0A;
+  --color-accent-tint: #FFF4DE;
+  --color-success: #2B7A4B;
+  --color-success-lip: #1E5C37;
+  --color-success-tint: #EEF7F1;
+  --color-locked: #E5DACB;
+
+  --font-display: "Candara", "Trebuchet MS", "Segoe UI", sans-serif;
+  --font-body: "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  --radius-chip: 8px;
+  --radius-control: 12px;
+  --radius-card: 16px;
+  --radius-panel: 20px;
+
+  --shadow-focal: 0 4px 12px rgb(74 31 12 / 0.07);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Tactile 3D lip button and path node helpers */
+.tactile-btn {
+  transition: transform 80ms ease, box-shadow 80ms ease, background-color 150ms ease;
+}
+
+.tactile-btn:active:not(:disabled) {
+  transform: translateY(4px);
+}
+
+.tactile-brand {
+  box-shadow: 0 4px 0 0 var(--color-brand-lip);
+}
+
+.tactile-brand:active:not(:disabled) {
+  box-shadow: 0 0 0 0 var(--color-brand-lip);
+}
+
+.tactile-accent {
+  box-shadow: 0 4px 0 0 var(--color-accent-lip);
+}
+
+.tactile-accent:active:not(:disabled) {
+  box-shadow: 0 0 0 0 var(--color-accent-lip);
+}
+
+.tactile-success {
+  box-shadow: 0 4px 0 0 var(--color-success-lip);
+}
+
+.tactile-success:active:not(:disabled) {
+  box-shadow: 0 0 0 0 var(--color-success-lip);
+}
+
+.tactile-neutral {
+  box-shadow: 0 4px 0 0 var(--color-border-control);
+}
+
+.tactile-neutral:active:not(:disabled) {
+  box-shadow: 0 0 0 0 var(--color-border-control);
+}
+
+/* Focus ring accessible across all interactive controls */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* Slide-up feedback banner animation (MOTION 1) */
+@keyframes slideUpFeedback {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-feedback-up {
+  animation: slideUpFeedback 200ms ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .tactile-btn,
+  .animate-feedback-up,
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
