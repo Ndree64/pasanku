@@ -1,54 +1,50 @@
-import { cookies } from "next/headers";
+import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Profile, UserRole } from "@/types/pasanku";
-import { readLocalDb } from "@/lib/data/local-store";
-import {
-  createSupabaseServerClient,
-  isSupabaseServerConfigured,
-} from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export const LOCAL_SESSION_COOKIE = "pasanku_session_uid";
+export async function getCachedProfileRow(userId: string) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("profiles");
 
-export async function getSessionUser(): Promise<Profile | null> {
-  if (isSupabaseServerConfigured()) {
-    try {
-      const supabase = await createSupabaseServerClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile) return null;
-      return {
-        id: profile.id,
-        email: user.email ?? "",
-        username: profile.username ?? (user.email ?? "").split("@")[0],
-        fullName: profile.full_name,
-        role: profile.role as UserRole,
-        isActive: profile.is_active ?? true,
-        createdAt: profile.created_at,
-        updatedAt: profile.updated_at,
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  const cookieStore = await cookies();
-  const uid = cookieStore.get(LOCAL_SESSION_COOKIE)?.value;
-  if (!uid) return null;
-
-  const db = readLocalDb();
-  const profile = db.profiles.find((p) => p.id === uid);
-  if (!profile || !profile.isActive) return null;
-  return profile;
+  const admin = createSupabaseAdminClient();
+  const { data } = await admin
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+  return data;
 }
+
+export const getSessionUser = cache(async (): Promise<Profile | null> => {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.auth.getClaims();
+    const claims = data?.claims;
+    if (error || !claims?.sub) return null;
+
+    const userId = String(claims.sub);
+    const email = typeof claims.email === "string" ? claims.email : "";
+    const profile = await getCachedProfileRow(userId);
+    if (!profile || profile.is_active === false) return null;
+
+    return {
+      id: profile.id,
+      email,
+      username: profile.username ?? (email ? email.split("@")[0] : "pengguna"),
+      fullName: profile.full_name,
+      role: profile.role as UserRole,
+      isActive: profile.is_active ?? true,
+      createdAt: profile.created_at,
+      updatedAt: profile.updated_at,
+    };
+  } catch {
+    return null;
+  }
+});
 
 export async function requireUser(): Promise<Profile> {
   const user = await getSessionUser();

@@ -10,17 +10,17 @@ Aplikasi pembelajaran Bahasa Pasan (Ratahan, Minahasa Tenggara) berbasis web men
 
 1. [Gambaran Produk dan Peran Pengguna](#1-gambaran-produk-dan-peran-pengguna)
 2. [Fitur Utama](#2-fitur-utama)
-3. [Teknologi yang Digunakan](#3-teknologi-yang-digunakan)
+3. [Teknologi dan Optimasi Performa](#3-teknologi-dan-optimasi-performa)
 4. [Struktur Direktori](#4-struktur-direktori)
 5. [Menjalankan Secara Lokal](#5-menjalankan-secara-lokal)
-6. [Konfigurasi Supabase (Produksi)](#6-konfigurasi-supabase-produksi)
+6. [Konfigurasi Supabase dan Deploy Vercel](#6-konfigurasi-supabase-dan-deploy-vercel)
 7. [Verifikasi dan Pengujian](#7-verifikasi-dan-pengujian)
 
 ---
 
 ## 1. Gambaran Produk dan Peran Pengguna
 
-PASANKU dirancang dalam satu aplikasi monolitik Next.js (App Router) dengan pembagian hak akses berbasis peran (*Role-Based Access Control*) yang divalidasi di sisi server:
+PASANKU dirancang dalam satu aplikasi Next.js (App Router) dengan pembagian hak akses berbasis peran (*Role-Based Access Control*) yang divalidasi di sisi server:
 
 | Peran | Tanggung Jawab | Rute Utama |
 | --- | --- | --- |
@@ -40,13 +40,12 @@ PASANKU dirancang dalam satu aplikasi monolitik Next.js (App Router) dengan pemb
   - Unit 4: Keluarga dan Kehidupan Sehari-hari
   - Unit 5: Ungkapan dan Percakapan Sederhana
 - **Microlearning & Urutan Fleksibel**: Materi singkat disajikan bertahap bersama latihan dalam satu lesson, dengan urutan aktivitas (`material` dan `exercise`) yang dapat diatur naik-turun oleh Admin.
-- **5 Variasi Latihan & Soal Quiz**:
-  1. Pilihan ganda Bahasa Pasan ke Bahasa Indonesia
-  2. Pilihan ganda Bahasa Indonesia ke Bahasa Pasan
-  3. Mencocokkan pasangan (*matching* dengan dukungan penilaian parsial per pasangan)
-  4. Melengkapi ungkapan atau kalimat rumpang
-  5. Memahami percakapan tertulis
-- **Penilaian & Kelulusan Aman di Server**: Kunci jawaban terisolasi dan tidak pernah dikirim ke browser Learner. Ambang kelulusan lesson dan Quiz Unit adalah **75 dari 100**.
+- **4 Variasi Latihan & Soal Quiz**:
+  1. Pilihan ganda Bahasa Pasan ke Bahasa Indonesia (`multiple_choice_pasan_to_id`)
+  2. Pilihan ganda Bahasa Indonesia ke Bahasa Pasan (`multiple_choice_id_to_pasan`)
+  3. Mencocokkan pasangan (`matching`, dengan dukungan penilaian parsial per pasangan)
+  4. Melengkapi ungkapan atau kalimat rumpang (`fill_blank`)
+- **Penilaian & Kelulusan Aman di Server**: Kunci jawaban terisolasi oleh Row Level Security dan tidak pernah dikirim ke browser Learner. Ambang kelulusan lesson dan Quiz Unit adalah **75 dari 100**.
 - **Rekomendasi Remedial Adaptif**: Apabila nilai Quiz Unit di bawah 75, sistem mengelompokkan jawaban salah berdasarkan `primary_lesson_id`, mengurutkan dari kesalahan terbanyak (seri diprioritaskan urutan lesson lebih awal), dan merekomendasikan maksimal **3 lesson remedial**. Quiz Unit hanya dapat diulang setelah seluruh remedial diselesaikan.
 - **Gamifikasi XP Tanpa Duplikasi**:
   - Lulus lesson reguler pertama kali: **+10 XP**
@@ -57,12 +56,16 @@ PASANKU dirancang dalam satu aplikasi monolitik Next.js (App Router) dengan pemb
 
 ---
 
-## 3. Teknologi yang Digunakan
+## 3. Teknologi dan Optimasi Performa
 
-- **Framework**: Next.js 16.4.6 (App Router, `cacheComponents: true`, `proxy.ts`)
+- **Framework**: Next.js 16.4.6 (App Router, `cacheComponents: true`, `partialPrefetching: true`, `proxy.ts`)
 - **Bahasa & UI**: TypeScript 5, React 19, Tailwind CSS v4 (`@tailwindcss/postcss`), Lucide React
-- **Backend & Auth Terkelola**: Supabase (`@supabase/supabase-js`, `@supabase/ssr`, PostgreSQL, Row Level Security)
-- **Mode Pengembangan Lokal**: Penyimpanan JSON sisi server otomatis (`.pasanku-local-db.json`) saat environment Supabase belum dikonfigurasi
+- **Backend & Auth**: Supabase (`@supabase/supabase-js`, `@supabase/ssr`, PostgreSQL, Row Level Security)
+- **Optimasi Kecepatan Muat**:
+  - **Verifikasi JWT Lokal**: `getSessionUser` menggunakan `supabase.auth.getClaims()` sehingga pemeriksaan sesi tidak melakukan roundtrip HTTP berulang ke Supabase Auth.
+  - **Caching Bertingkat (`"use cache"` + `cacheTag`)**: Query struktur ringan (`getCachedPathStructure`), kamus (`getCachedVocabularies`), kurikulum lengkap (`getCachedCurriculum`), status user (`getCachedUserState`), dan papan skor (`getCachedLeaderboardBase`) di-cache di server dan otomatis di-invalidasi via `revalidateTag` saat ada mutasi data.
+  - **Persistent Shell Layouts**: `AppShell` dipasang di `layout.tsx` masing-masing panel (`(shell)`, `validator`, `admin`) sehingga sidebar dan bottom navigation tidak ikut me-remount atau berkedip saat berpindah halaman.
+  - **Loading Skeleton Berbasis Pola**: Setiap halaman memiliki fallback `loading.tsx` dan `<Suspense>` dengan skeleton yang menyesuaikan struktur tata letak ([States.tsx](./components/ui/States.tsx)).
 
 ---
 
@@ -70,34 +73,40 @@ PASANKU dirancang dalam satu aplikasi monolitik Next.js (App Router) dengan pemb
 
 ```text
 pasanku/
-├── actions/                  # Server Actions (auth, learning, quiz, content, validation)
+├── actions/                          # Server Actions (auth, learning, quiz, content, validation)
 ├── app/
-│   ├── (auth)/               # Halaman login dan register
-│   ├── (learner)/learner/    # Learning Path, Lesson Runner, Quiz Unit, Kamus, Papan Skor, Profil
-│   ├── (validator)/validator/# Antrean review, detail pemeriksaan kunci jawaban, riwayat, kamus
-│   ├── (admin)/admin/        # Dashboard pipeline, manajemen unit, builder lesson, quiz, validator
-│   ├── preview/              # Mode Pratinjau Learning Path (Admin & Validator)
-│   ├── globals.css           # Token warna @theme Tailwind v4 & utilitas tombol taktil
-│   ├── layout.tsx            # Root layout (lang="id", font Candara & Segoe UI)
-│   └── page.tsx              # Halaman Welcome & Landing
+│   ├── (auth)/                       # Halaman login dan register
+│   ├── (learner)/
+│   │   ├── (shell)/                  # Persistent layout AppShell untuk halaman tab Learner
+│   │   │   ├── layout.tsx
+│   │   │   └── learner/              # Jalur Belajar, Kamus, Papan Skor, Profil (+ loading.tsx)
+│   │   └── learner/
+│   │       ├── lessons/[lessonId]/   # Lesson Runner (tampilan fokus tanpa shell)
+│   │       └── quizzes/[unitId]/     # Quiz Unit Runner (tampilan fokus tanpa shell)
+│   ├── (validator)/validator/        # Layout persistent, Antrean, Detail Review, Riwayat, Kamus
+│   ├── (admin)/admin/                # Layout persistent, Ringkasan, Unit, Builder Lesson, Quiz, Validator
+│   ├── preview/                      # Mode Pratinjau Learning Path (Admin & Validator)
+│   ├── globals.css                   # Token warna @theme Tailwind v4 & utilitas tombol taktil
+│   ├── layout.tsx                    # Root layout (lang="id", font Candara & Segoe UI)
+│   └── page.tsx                      # Halaman Welcome & Landing
 ├── components/
-│   ├── layout/               # AppShell responsif (Bottom Nav mobile & Sidebar desktop)
-│   └── ui/                   # Komponen dasar (Button, Card, ProgressBar, Empty/Error states)
-├── features/                 # Komponen interaktif per modul (auth, learning, quiz, content, validation)
+│   ├── layout/                       # AppShell responsif (Bottom Nav mobile & Sidebar desktop)
+│   └── ui/                           # Primitives (Button, Card, ProgressBar) & States (Skeleton, Empty, Error)
+├── features/                         # Komponen interaktif per modul (auth, learning, quiz, content, validation)
 ├── lib/
-│   ├── auth/                 # Manajemen sesi & pemeriksaan peran di server
-│   ├── data/                 # Seed data kurikulum, sanitizer kunci jawaban, local store, repository
-│   ├── domain/               # Logika murni: scoring, recommendation, gamification, access rules
-│   └── supabase/             # Klien Supabase browser, server, dan admin
-├── public/images/            # Aset maskot dan ikon aplikasi Pasanku
-├── scripts/                  # Skrip verifikasi logika domain
+│   ├── auth/                         # Manajemen sesi (getClaims + cache profil) & pemeriksaan peran
+│   ├── data/                         # supabase-store.ts, repository.ts, contracts.ts, sanitize.ts, question-builder.ts, seed-data.ts
+│   ├── domain/                       # Logika murni: scoring, recommendation, gamification, access rules
+│   └── supabase/                     # Klien Supabase server (cookie SSR) dan admin (service role singleton)
+├── public/images/                    # Aset maskot dan ikon aplikasi Pasanku
+├── scripts/                          # verify-domain.ts, seed-supabase.ts, test-supabase-login.ts
 ├── supabase/
-│   ├── migrations/           # Skema SQL 23 tabel, enum, trigger, dan RLS
-│   └── seed.sql              # Data awal 5 unit kurikulum
-├── types/                    # Definisi tipe TypeScript entitas Pasanku
-├── DESIGN.md                 # Dokumen sistem desain UI/UX Pasanku
-├── AGENTS.md                 # Aturan pengembangan Next.js 16 & filter antislop
-└── proxy.ts                  # Proxy Next.js 16 untuk penjagaan rute awal
+│   ├── migrations/                   # Skema SQL 23 tabel, enum, trigger, dan RLS
+│   └── seed.sql                      # Data awal 5 unit kurikulum
+├── types/                            # Definisi tipe TypeScript entitas Pasanku
+├── DESIGN.md                         # Dokumen sistem desain UI/UX Pasanku
+├── AGENTS.md                         # Aturan pengembangan Next.js 16 & filter antislop
+└── proxy.ts                          # Proxy Next.js 16 untuk penjagaan rute awal
 ```
 
 ---
@@ -107,64 +116,69 @@ pasanku/
 ### Prasyarat
 - Node.js 20+ (disarankan LTS atau Node 22/24)
 - npm 10+
+- Project Supabase aktif (URL, Anon Key, dan Service Role Key)
 
 ### Langkah Instalasi
 
-```bash
-npm install
-npm run dev
-```
-
-Buka [http://localhost:3000](http://localhost:3000) pada browser. Jika variabel Supabase belum diisi, aplikasi otomatis berjalan menggunakan mode penyimpanan lokal.
-
-### Akun Demo Lokal
-
-Pada halaman [http://localhost:3000/login](http://localhost:3000/login), tersedia tombol **Akses Cepat Demo Lokal** atau gunakan kredensial berikut (kata sandi seluruh akun demo: `pasanku123`):
-
-| Peran | Email |
-| --- | --- |
-| Learner | `learner@pasanku.id` |
-| Validator | `validator@pasanku.id` |
-| Admin | `admin@pasanku.id` |
-
-> **Catatan**: Entri kosakata dan soal bawaan pada `lib/data/seed-data.ts` merupakan data kurikulum awal untuk uji coba sistem dan perlu diverifikasi oleh Validator/penutur asli Bahasa Pasan melalui panel Validator.
-
----
-
-## 6. Konfigurasi Supabase (Produksi)
-
-1. Salin berkas templat environment:
+1. Salin berkas templat environment dan isi kredensial Supabase pada `.env.local`:
    ```bash
    cp .env.example .env.local
    ```
-2. Isi variabel pada `.env.local` (jangan pernah mengunggah `.env.local` ke GitHub):
    ```env
    NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-or-publishable-key
    SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
    ```
-3. Jalankan skrip SQL migrasi dan data awal pada **Supabase SQL Editor** secara berurutan:
-   - `supabase/migrations/0001_initial_schema.sql`
-   - `supabase/seed.sql`
-4. Buat akun Admin pertama melalui Supabase Auth Dashboard, lalu tetapkan perannya secara terkontrol:
-   ```sql
-   UPDATE public.profiles SET role = 'admin' WHERE id = '<UUID_ADMIN>';
+
+2. Pasang dependensi, isi data awal ke Supabase, lalu jalankan server pengembangan:
+   ```bash
+   npm install
+   node --experimental-strip-types scripts/seed-supabase.ts
+   npm run dev
    ```
+
+3. Buka [http://localhost:3000](http://localhost:3000) pada browser.
+
+### Akun Awal (Hasil Seed Supabase)
+
+| Peran | Email | Kata Sandi Default |
+| --- | --- | --- |
+| Learner | `learner@pasanku.id` | `pasanku123` |
+| Validator | `validator@pasanku.id` | `pasanku123` |
+| Admin | `admin@pasanku.id` | `pasanku123` |
+
+> **Catatan**: Entri kosakata dan soal bawaan pada `lib/data/seed-data.ts` merupakan data kurikulum awal untuk uji coba sistem dan perlu diverifikasi oleh Validator/penutur asli Bahasa Pasan melalui panel Validator.
+
+---
+
+## 6. Konfigurasi Supabase dan Deploy Vercel
+
+### Setup Database Supabase
+1. Jalankan skrip SQL migrasi [0001_initial_schema.sql](./supabase/migrations/0001_initial_schema.sql) di **Supabase SQL Editor**.
+2. Jalankan `node --experimental-strip-types scripts/seed-supabase.ts` (atau [seed.sql](./supabase/seed.sql)) untuk mengisi 5 unit, 25 lesson, kosakata, soal latihan, dan quiz.
+3. Jangan pernah mengunggah berkas `.env.local` ke GitHub.
+
+### Optimasi Deploy di Vercel
+- Tambahkan `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, dan `SUPABASE_SERVICE_ROLE_KEY` pada **Vercel Environment Variables**.
+- **Samakan Function Region dengan Region Supabase**: Ubah **Project Settings -> Functions -> Function Region** di Vercel ke region terdekat dengan database Supabase Anda (misalnya sama-sama **Singapore `sin1` / `ap-southeast-1`**) agar latensi koneksi server ke database tetap rendah (~5-20 ms).
 
 ---
 
 ## 7. Verifikasi dan Pengujian
 
-Jalankan perintah berikut untuk memastikan logika domain, aturan *lint*, dan *build* produksi berjalan bersih:
+Jalankan perintah berikut untuk memastikan logika domain, aturan *lint*, autentikasi Supabase, dan *build* produksi berjalan bersih:
 
 ```bash
 # 1. Uji logika penilaian, rekomendasi adaptif, XP, dan aturan akses
 node --experimental-strip-types scripts/verify-domain.ts
 
-# 2. Pemeriksaan ESLint
+# 2. Uji login & profil ke Supabase Auth (opsional)
+node --experimental-strip-types scripts/test-supabase-login.ts
+
+# 3. Pemeriksaan ESLint
 npm run lint
 
-# 3. Build produksi Next.js
+# 4. Build produksi Next.js
 npm run build
 ```
 

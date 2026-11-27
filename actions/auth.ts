@@ -1,19 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
-import {
-  getDefaultHomeByRole,
-  LOCAL_SESSION_COOKIE,
-} from "@/lib/auth/session";
-import {
-  registerLearnerAccount,
-  verifyCredentials,
-} from "@/lib/data/repository";
-import {
-  createSupabaseServerClient,
-  isSupabaseServerConfigured,
-} from "@/lib/supabase/server";
+import { getCachedProfileRow, getDefaultHomeByRole } from "@/lib/auth/session";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export interface AuthActionState {
   error?: string;
@@ -27,57 +17,28 @@ export async function loginAction(
   const password = String(formData.get("password") ?? "");
 
   if (!identifier || !password) {
-    return { error: "Email/username dan kata sandi wajib diisi." };
+    return { error: "Email dan kata sandi wajib diisi." };
   }
 
-  if (isSupabaseServerConfigured()) {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: identifier,
-      password,
-    });
-    if (error || !data.user) {
-      return { error: "Email atau kata sandi tidak valid." };
-    }
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", data.user.id)
-      .single();
-    const role = (profile?.role as "admin" | "validator" | "learner") ?? "learner";
-    redirect(getDefaultHomeByRole(role));
-  }
-
-  const res = verifyCredentials(identifier, password);
-  if (!res.profile) {
-    return { error: res.error ?? "Gagal masuk." };
-  }
-
-  const cookieStore = await cookies();
-  cookieStore.set(LOCAL_SESSION_COOKIE, res.profile.id, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: identifier,
+    password,
   });
-
-  redirect(getDefaultHomeByRole(res.profile.role));
-}
-
-export async function demoQuickLoginAction(formData: FormData): Promise<void> {
-  const identifier = String(formData.get("identifier") ?? "");
-  const res = verifyCredentials(identifier, "pasanku123");
-  if (!res.profile) {
-    redirect("/login");
+  if (error || !data.user) {
+    return { error: "Email atau kata sandi tidak valid." };
   }
-  const cookieStore = await cookies();
-  cookieStore.set(LOCAL_SESSION_COOKIE, res.profile.id, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-  });
-  redirect(getDefaultHomeByRole(res.profile.role));
+
+  const profile = await getCachedProfileRow(data.user.id);
+  if (!profile || profile.is_active === false) {
+    await supabase.auth.signOut();
+    return {
+      error: "Akun ini belum aktif atau dinonaktifkan. Hubungi Admin.",
+    };
+  }
+
+  const role = (profile.role as "admin" | "validator" | "learner") ?? "learner";
+  redirect(getDefaultHomeByRole(role));
 }
 
 export async function registerAction(
@@ -94,41 +55,23 @@ export async function registerAction(
     };
   }
 
-  if (isSupabaseServerConfigured()) {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-    if (error || !data.user) {
-      return { error: error?.message ?? "Pendaftaran gagal." };
-    }
-    redirect("/learner");
-  }
-
-  const result = registerLearnerAccount({ fullName, email, password });
-  if (result.error || !result.profile) {
-    return { error: result.error ?? "Pendaftaran gagal." };
-  }
-
-  const cookieStore = await cookies();
-  cookieStore.set(LOCAL_SESSION_COOKIE, result.profile.id, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName } },
   });
+  if (error || !data.user) {
+    return { error: error?.message ?? "Pendaftaran gagal." };
+  }
 
+  revalidateTag("profiles", "max");
+  revalidateTag("leaderboard", "max");
   redirect("/learner");
 }
 
 export async function logoutAction(): Promise<void> {
-  if (isSupabaseServerConfigured()) {
-    const supabase = await createSupabaseServerClient();
-    await supabase.auth.signOut();
-  }
-  const cookieStore = await cookies();
-  cookieStore.delete(LOCAL_SESSION_COOKIE);
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut();
   redirect("/login");
 }

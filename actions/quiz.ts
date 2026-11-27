@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import type { QuestionResponseData } from "@/types/pasanku";
 import { requireUser } from "@/lib/auth/session";
 import {
@@ -18,7 +18,7 @@ export async function submitQuizEvaluationAction(params: {
     throw new Error("Mode Pratinjau hanya untuk Admin atau Validator.");
   }
 
-  const result = evaluateQuizAttempt({
+  const result = await evaluateQuizAttempt({
     userId: user.id,
     unitId: params.unitId,
     responses: params.responses,
@@ -26,6 +26,8 @@ export async function submitQuizEvaluationAction(params: {
   });
 
   if (!params.isPreview) {
+    revalidateTag(`user-${user.id}`, "max");
+    revalidateTag("leaderboard", "max");
     revalidatePath("/learner");
     revalidatePath("/learner/profil");
     revalidatePath("/learner/papan-skor");

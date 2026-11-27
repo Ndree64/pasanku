@@ -12,23 +12,17 @@ import {
   Info,
   KeyRound,
 } from "lucide-react";
-import type { AnswerKey } from "@/types/pasanku";
 import { submitValidationDecisionAction } from "@/actions/validation";
+import {
+  formatAnswerKeySummary,
+  QUESTION_TYPE_LABELS,
+} from "@/lib/data/question-builder";
 import { Button, Card, ContentStatusBadge } from "@/components/ui/Primitives";
 import type { getPrivilegedContentDetail } from "@/lib/data/repository";
 
-type DetailPayload = NonNullable<ReturnType<typeof getPrivilegedContentDetail>>;
-
-function formatAnswerKey(key: AnswerKey | null): string {
-  if (!key) return "Belum diatur";
-  if ("correctOption" in key) return `Opsi ${key.correctOption}`;
-  if ("pairs" in key) {
-    return Object.entries(key.pairs)
-      .map(([l, r]) => `${l} -> ${r}`)
-      .join(", ");
-  }
-  return "-";
-}
+type DetailPayload = NonNullable<
+  Awaited<ReturnType<typeof getPrivilegedContentDetail>>
+>;
 
 export function ReviewDetailClient({
   detail,
@@ -228,7 +222,8 @@ export function ReviewDetailClient({
                 <Card key={question.id} className="space-y-2.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-extrabold text-brand uppercase">
-                      Soal Latihan #{idx + 1} · {question.questionType}
+                      Soal Latihan #{idx + 1} ·{" "}
+                      {QUESTION_TYPE_LABELS[question.questionType]}
                     </span>
                     <span className="font-bold text-ink-soft">
                       Bobot {question.points}
@@ -248,7 +243,10 @@ export function ReviewDetailClient({
                   ) : null}
                   <div className="flex items-center gap-2 p-2.5 rounded-control bg-success-tint border border-success/30 text-xs font-bold text-success">
                     <KeyRound className="w-4 h-4 shrink-0" aria-hidden="true" />
-                    <span>Kunci Jawaban: {formatAnswerKey(answerKey)}</span>
+                    <span>
+                      Kunci Jawaban:{" "}
+                      {formatAnswerKeySummary(answerKey, question.questionData)}
+                    </span>
                   </div>
                   {question.explanation ? (
                     <p className="text-xs text-ink-soft">
@@ -293,7 +291,8 @@ export function ReviewDetailClient({
               <Card key={question.id} className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                   <span className="font-extrabold text-brand">
-                    Soal Quiz #{idx + 1}
+                    Soal Quiz #{idx + 1} ·{" "}
+                    {QUESTION_TYPE_LABELS[question.questionType]}
                   </span>
                   <span className="px-2 py-0.5 rounded-chip bg-surface-soft border border-border-subtle font-bold text-ink-soft">
                     Sumber Lesson: {primaryLessonTitle}
@@ -304,7 +303,10 @@ export function ReviewDetailClient({
                 </p>
                 <div className="flex items-center gap-2 p-2.5 rounded-control bg-success-tint border border-success/30 text-xs font-bold text-success">
                   <KeyRound className="w-4 h-4 shrink-0" aria-hidden="true" />
-                  <span>Kunci: {formatAnswerKey(answerKey)}</span>
+                  <span>
+                    Kunci:{" "}
+                    {formatAnswerKeySummary(answerKey, question.questionData)}
+                  </span>
                 </div>
               </Card>
             )

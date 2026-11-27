@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import type { QuestionResponseData } from "@/types/pasanku";
 import { requireUser } from "@/lib/auth/session";
 import {
@@ -20,7 +20,7 @@ export async function completeMaterialStepAction(params: {
     throw new Error("Akses pratinjau ditolak.");
   }
 
-  markLessonMaterialDone({
+  await markLessonMaterialDone({
     userId: user.id,
     lessonId: params.lessonId,
     activityId: params.activityId,
@@ -28,6 +28,9 @@ export async function completeMaterialStepAction(params: {
     assignmentId: params.assignmentId,
   });
 
+  if (params.mode !== "preview") {
+    revalidateTag(`user-${user.id}`, "max");
+  }
   revalidatePath(`/learner/lessons/${params.lessonId}`);
   return { ok: true };
 }
@@ -44,7 +47,7 @@ export async function submitLessonEvaluationAction(params: {
     throw new Error("Mode Pratinjau hanya untuk Admin atau Validator.");
   }
 
-  const result = evaluateLessonAttempt({
+  const result = await evaluateLessonAttempt({
     userId: user.id,
     lessonId: params.lessonId,
     responses: params.responses,
@@ -54,6 +57,8 @@ export async function submitLessonEvaluationAction(params: {
   });
 
   if (params.mode !== "preview") {
+    revalidateTag(`user-${user.id}`, "max");
+    revalidateTag("leaderboard", "max");
     revalidatePath("/learner");
     revalidatePath("/learner/profil");
     revalidatePath("/learner/papan-skor");

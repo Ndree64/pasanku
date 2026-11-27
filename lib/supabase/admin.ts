@@ -1,6 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-export function createSupabaseAdminClient() {
+let cachedAdminClient: SupabaseClient | null = null;
+
+export function createSupabaseAdminClient(): SupabaseClient {
+  if (cachedAdminClient) {
+    return cachedAdminClient;
+  }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) {
@@ -8,10 +13,11 @@ export function createSupabaseAdminClient() {
       "SUPABASE_SERVICE_ROLE_KEY belum diatur. Hanya boleh dijalankan di server."
     );
   }
-  return createClient(url, serviceKey, {
+  cachedAdminClient = createClient(url, serviceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
   });
+  return cachedAdminClient;
 }

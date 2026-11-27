@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getDefaultHomeByRole, requireRole } from "@/lib/auth/session";
 import { getQuizForRunner } from "@/lib/data/repository";
-import { ErrorState, PageSkeleton } from "@/components/ui/States";
+import { ErrorState, RunnerSkeleton } from "@/components/ui/States";
 import { QuizRunner } from "@/features/quiz/QuizRunner";
 
 async function QuizLoader({
@@ -24,7 +24,7 @@ async function QuizLoader({
     redirect(getDefaultHomeByRole(user.role));
   }
 
-  const payload = getQuizForRunner(user.id, unitId, { isPreview });
+  const payload = await getQuizForRunner(user.id, unitId, { isPreview });
 
   if (!payload) {
     return (
@@ -62,13 +62,7 @@ export default function QuizPage(props: {
   searchParams: Promise<{ mode?: string }>;
 }) {
   return (
-    <Suspense
-      fallback={
-        <div className="max-w-[960px] mx-auto p-6">
-          <PageSkeleton />
-        </div>
-      }
-    >
+    <Suspense fallback={<RunnerSkeleton />}>
       <QuizLoader params={props.params} searchParams={props.searchParams} />
     </Suspense>
   );

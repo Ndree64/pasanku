@@ -158,25 +158,6 @@ export function QuestionWidget({
         </div>
       ) : null}
 
-      {data.type === "dialogue" ? (
-        <div className="bg-surface-soft border border-border-subtle rounded-card p-4 space-y-3">
-          {data.dialogueLines.map((line, i) => (
-            <div
-              key={i}
-              className="bg-surface border border-border-subtle rounded-control p-3 space-y-0.5"
-            >
-              <p className="text-xs font-extrabold text-brand uppercase">
-                {line.speaker}
-              </p>
-              <p className="text-sm md:text-base font-bold text-ink">
-                {line.pasan}
-              </p>
-              <p className="text-xs text-ink-soft">{line.indonesian}</p>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
       <div className="space-y-2.5">
         {data.options.map((opt) => {
           const isSelected = selectedOption === opt.id;

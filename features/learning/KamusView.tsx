@@ -55,6 +55,8 @@ export function KamusView({
             aria-hidden="true"
           />
           <input
+            id="kamus-search"
+            name="q"
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}

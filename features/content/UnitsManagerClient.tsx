@@ -12,7 +12,7 @@ import {
 import type { getAdminUnitsOverview } from "@/lib/data/repository";
 import { Button, Card, ContentStatusBadge } from "@/components/ui/Primitives";
 
-type UnitsOverview = ReturnType<typeof getAdminUnitsOverview>;
+type UnitsOverview = Awaited<ReturnType<typeof getAdminUnitsOverview>>;
 
 export function UnitsManagerClient({
   overview,

@@ -13,8 +13,7 @@ export type QuestionType =
   | "multiple_choice_pasan_to_id"
   | "multiple_choice_id_to_pasan"
   | "matching"
-  | "fill_blank"
-  | "dialogue";
+  | "fill_blank";
 
 export type AttemptStatus = "in_progress" | "passed" | "failed";
 export type ProgressType = "regular" | "remedial";
@@ -124,17 +123,10 @@ export interface FillBlankQuestionData {
   options: Array<{ id: string; label: string }>;
 }
 
-export interface DialogueQuestionData {
-  type: "dialogue";
-  dialogueLines: Array<{ speaker: string; pasan: string; indonesian: string }>;
-  options: Array<{ id: string; label: string }>;
-}
-
 export type QuestionData =
   | MultipleChoiceQuestionData
   | MatchingQuestionData
-  | FillBlankQuestionData
-  | DialogueQuestionData;
+  | FillBlankQuestionData;
 
 export type AnswerKey =
   | { correctOption: string }

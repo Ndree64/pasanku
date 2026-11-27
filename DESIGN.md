@@ -201,7 +201,7 @@ Komponen `WovenDivider` menampilkan tiga belah ketupat kecil berputar 45 derajat
 - Kanvas fokus tanpa navigasi global, lebar maksimal `960px`.
 - Header: tombol tutup (`X`), `ProgressBar` hijau/amber, dan indikator langkah atau nomor soal.
 - Materi singkat: konten ringkas, kotak catatan, kartu kosakata, contoh kalimat, tombol `Sebelumnya` dan `Tandai Selesai & Lanjut`.
-- Latihan interaktif mendukung 5 bentuk soal: pilihan ganda Pasan ke Indonesia, pilihan ganda Indonesia ke Pasan, mencocokkan pasangan (tap kiri ke kanan dengan nomor pasangan dan penilaian parsial), melengkapi ungkapan rumpang, serta pemahaman percakapan tertulis.
+- Latihan interaktif mendukung 4 bentuk soal: pilihan ganda Pasan ke Indonesia, pilihan ganda Indonesia ke Pasan, mencocokkan pasangan (tap kiri ke kanan dengan nomor pasangan dan penilaian parsial), serta melengkapi ungkapan rumpang.
 - Hasil Lesson & Quiz: skor akhir `/ 100`, badge `Lulus` atau `Belum Lulus` (ambang 75), badge XP jika baru pertama kali lulus, pembahasan per soal, serta rekomendasi remedial pada Quiz yang gagal.
 
 ### 6.3 Gamifikasi

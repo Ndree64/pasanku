@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getDefaultHomeByRole, requireRole } from "@/lib/auth/session";
 import { getLessonForRunner } from "@/lib/data/repository";
-import { ErrorState, PageSkeleton } from "@/components/ui/States";
+import { ErrorState, RunnerSkeleton } from "@/components/ui/States";
 import { LessonRunner } from "@/features/learning/LessonRunner";
 
 async function LessonLoader({
@@ -30,7 +30,7 @@ async function LessonLoader({
     redirect(getDefaultHomeByRole(user.role));
   }
 
-  const payload = getLessonForRunner(user.id, lessonId, {
+  const payload = await getLessonForRunner(user.id, lessonId, {
     mode: requestedMode,
     assignmentId: sp.assignmentId,
   });
@@ -71,13 +71,7 @@ export default function LessonPage(props: {
   searchParams: Promise<{ mode?: string; assignmentId?: string }>;
 }) {
   return (
-    <Suspense
-      fallback={
-        <div className="max-w-[960px] mx-auto p-6">
-          <PageSkeleton />
-        </div>
-      }
-    >
+    <Suspense fallback={<RunnerSkeleton />}>
       <LessonLoader params={props.params} searchParams={props.searchParams} />
     </Suspense>
   );

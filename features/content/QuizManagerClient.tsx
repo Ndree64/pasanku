@@ -10,11 +10,16 @@ import {
   publishContentAction,
   submitForValidationAction,
 } from "@/actions/content";
+import {
+  formatAnswerKeySummary,
+  QUESTION_TYPE_LABELS,
+} from "@/lib/data/question-builder";
 import type { getAdminQuizzesOverview } from "@/lib/data/repository";
 import { Button, Card, ContentStatusBadge } from "@/components/ui/Primitives";
 import { EmptyState } from "@/components/ui/States";
+import { QuestionComposerFields } from "@/features/content/QuestionComposerFields";
 
-type QuizzesOverview = ReturnType<typeof getAdminQuizzesOverview>;
+type QuizzesOverview = Awaited<ReturnType<typeof getAdminQuizzesOverview>>;
 
 export function QuizManagerClient({
   overview,
@@ -214,68 +219,25 @@ export function QuizManagerClient({
                   name="quizId"
                   value={activeItem.quiz.id}
                 />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-extrabold uppercase text-ink-soft">
-                      Pemetaan Lesson Sumber (Wajib)
-                    </label>
-                    <select
-                      name="primaryLessonId"
-                      required
-                      className="w-full h-11 px-3 rounded-control border border-border-control bg-canvas text-xs text-ink"
-                    >
-                      {activeItem.unitLessons.map((l) => (
-                        <option key={l.id} value={l.id}>
-                          {activeItem.unit.orderNumber}.{l.orderNumber} {l.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-extrabold uppercase text-ink-soft">
-                      Kunci Jawaban Benar
-                    </label>
-                    <select
-                      name="correctOption"
-                      className="w-full h-11 px-3 rounded-control border border-border-control bg-canvas text-xs font-bold text-ink"
-                    >
-                      <option value="A">Opsi A</option>
-                      <option value="B">Opsi B</option>
-                      <option value="C">Opsi C</option>
-                    </select>
-                  </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-extrabold uppercase text-ink-soft">
+                    Pemetaan Lesson Sumber (Wajib)
+                  </label>
+                  <select
+                    name="primaryLessonId"
+                    required
+                    className="w-full h-11 px-3 rounded-control border border-border-control bg-canvas text-xs text-ink"
+                  >
+                    {activeItem.unitLessons.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {activeItem.unit.orderNumber}.{l.orderNumber} {l.title}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <input
-                  name="questionText"
-                  required
-                  placeholder="Tuliskan pertanyaan quiz..."
-                  className="w-full h-11 px-3 rounded-control border border-border-control bg-canvas text-sm text-ink"
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <input
-                    name="optionA"
-                    required
-                    placeholder="Pilihan A"
-                    className="h-10 px-3 rounded-control border border-border-control bg-canvas text-xs"
-                  />
-                  <input
-                    name="optionB"
-                    required
-                    placeholder="Pilihan B"
-                    className="h-10 px-3 rounded-control border border-border-control bg-canvas text-xs"
-                  />
-                  <input
-                    name="optionC"
-                    required
-                    placeholder="Pilihan C"
-                    className="h-10 px-3 rounded-control border border-border-control bg-canvas text-xs"
-                  />
-                </div>
-                <input
-                  name="explanation"
-                  placeholder="Penjelasan singkat jawaban..."
-                  className="w-full h-10 px-3 rounded-control border border-border-control bg-canvas text-xs"
-                />
+
+                <QuestionComposerFields />
+
                 <Button type="submit" variant="primary" size="sm" disabled={isPending}>
                   + Simpan Soal ke Quiz
                 </Button>
@@ -293,7 +255,8 @@ export function QuizManagerClient({
                 <Card key={question.id} className="space-y-1.5">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                     <span className="font-extrabold text-brand">
-                      Soal #{idx + 1} · {question.questionType}
+                      Soal #{idx + 1} ·{" "}
+                      {QUESTION_TYPE_LABELS[question.questionType]}
                     </span>
                     <span className="px-2 py-0.5 rounded-chip bg-surface-soft border border-border-subtle font-bold text-ink-soft">
                       Lesson {activeItem.unit.orderNumber}.
@@ -304,11 +267,9 @@ export function QuizManagerClient({
                     {question.questionText}
                   </p>
                   <p className="text-xs font-bold text-success flex items-center gap-1.5">
-                    <KeyRound className="w-3.5 h-3.5" aria-hidden="true" />
+                    <KeyRound className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                     Kunci:{" "}
-                    {answerKey && "correctOption" in answerKey
-                      ? `Opsi ${answerKey.correctOption}`
-                      : "Pasangan"}
+                    {formatAnswerKeySummary(answerKey, question.questionData)}
                   </p>
                 </Card>
               );

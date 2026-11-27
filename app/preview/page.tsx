@@ -4,7 +4,7 @@ import { ArrowLeft, Eye } from "lucide-react";
 import { getDefaultHomeByRole, requireRole } from "@/lib/auth/session";
 import { getLearningPathData } from "@/lib/data/repository";
 import { AppShell } from "@/components/layout/AppShell";
-import { PageSkeleton } from "@/components/ui/States";
+import { LearningPathSkeleton, ShellSkeleton } from "@/components/ui/States";
 import { LearningPathView } from "@/features/learning/LearningPathView";
 
 async function PreviewContent({
@@ -15,7 +15,7 @@ async function PreviewContent({
   const user = await requireRole(["admin", "validator"]);
   const sp = await searchParams;
   const includeUnpublished = sp.status !== "published";
-  const pathData = getLearningPathData(user.id, {
+  const pathData = await getLearningPathData(user.id, {
     isPreview: true,
     includeUnpublished,
   });
@@ -89,9 +89,9 @@ export default function PreviewPage(props: {
   return (
     <Suspense
       fallback={
-        <div className="p-6 max-w-4xl mx-auto">
-          <PageSkeleton />
-        </div>
+        <ShellSkeleton label="Memuat pratinjau jalur belajar">
+          <LearningPathSkeleton />
+        </ShellSkeleton>
       }
     >
       <PreviewContent searchParams={props.searchParams} />

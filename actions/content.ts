@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import type { QuestionType } from "@/types/pasanku";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
+import { parseQuestionFormData } from "@/lib/data/question-builder";
 import {
   addExerciseQuestionActivity,
   addMaterialActivity,
@@ -18,98 +18,81 @@ import {
   updateMaterialActivity,
 } from "@/lib/data/repository";
 
+const field = (formData: FormData, key: string) => String(formData.get(key) ?? "");
+
+function revalidateCurriculum(...paths: string[]) {
+  revalidateTag("curriculum", "max");
+  for (const path of paths) revalidatePath(path);
+}
+
 export async function createLessonAction(formData: FormData) {
   await requireRole(["admin"]);
-  const unitId = String(formData.get("unitId") ?? "");
-  const title = String(formData.get("title") ?? "");
-  const description = String(formData.get("description") ?? "");
-  const objective = String(formData.get("objective") ?? "");
-
-  const res = createNewLesson({ unitId, title, description, objective });
-  revalidatePath("/admin");
-  revalidatePath("/admin/units");
+  const res = await createNewLesson({
+    unitId: field(formData, "unitId"),
+    title: field(formData, "title"),
+    description: field(formData, "description"),
+    objective: field(formData, "objective"),
+  });
+  revalidateCurriculum("/admin", "/admin/units");
   return res;
 }
 
 export async function updateLessonMetaAction(formData: FormData) {
   await requireRole(["admin"]);
-  const lessonId = String(formData.get("lessonId") ?? "");
-  const title = String(formData.get("title") ?? "");
-  const description = String(formData.get("description") ?? "");
-  const objective = String(formData.get("objective") ?? "");
-
-  const res = updateLessonDetails({ lessonId, title, description, objective });
-  revalidatePath(`/admin/lessons/${lessonId}`);
-  revalidatePath("/admin/units");
+  const lessonId = field(formData, "lessonId");
+  const res = await updateLessonDetails({
+    lessonId,
+    title: field(formData, "title"),
+    description: field(formData, "description"),
+    objective: field(formData, "objective"),
+  });
+  revalidateCurriculum(`/admin/lessons/${lessonId}`, "/admin/units");
   return res;
 }
 
 export async function addMaterialActivityAction(formData: FormData) {
   await requireRole(["admin"]);
-  const lessonId = String(formData.get("lessonId") ?? "");
-  const title = String(formData.get("title") ?? "");
-  const instruction = String(formData.get("instruction") ?? "");
-  const content = String(formData.get("content") ?? "");
-  const explanation = String(formData.get("explanation") ?? "");
-  const examplePasan = String(formData.get("examplePasan") ?? "");
-  const exampleTranslation = String(formData.get("exampleTranslation") ?? "");
-
-  const res = addMaterialActivity({
+  const lessonId = field(formData, "lessonId");
+  const res = await addMaterialActivity({
     lessonId,
-    title,
-    instruction,
-    content,
-    explanation,
-    examplePasan,
-    exampleTranslation,
+    title: field(formData, "title"),
+    instruction: field(formData, "instruction"),
+    content: field(formData, "content"),
+    explanation: field(formData, "explanation"),
+    examplePasan: field(formData, "examplePasan"),
+    exampleTranslation: field(formData, "exampleTranslation"),
   });
-  revalidatePath(`/admin/lessons/${lessonId}`);
+  revalidateCurriculum(`/admin/lessons/${lessonId}`);
   return res;
 }
 
 export async function updateMaterialActivityAction(formData: FormData) {
   await requireRole(["admin"]);
-  const lessonId = String(formData.get("lessonId") ?? "");
-  const activityId = String(formData.get("activityId") ?? "");
-  const title = String(formData.get("title") ?? "");
-  const content = String(formData.get("content") ?? "");
-  const explanation = String(formData.get("explanation") ?? "");
-
-  const res = updateMaterialActivity({
+  const lessonId = field(formData, "lessonId");
+  const res = await updateMaterialActivity({
     lessonId,
-    activityId,
-    title,
-    content,
-    explanation,
+    activityId: field(formData, "activityId"),
+    title: field(formData, "title"),
+    content: field(formData, "content"),
+    explanation: field(formData, "explanation"),
   });
-  revalidatePath(`/admin/lessons/${lessonId}`);
+  revalidateCurriculum(`/admin/lessons/${lessonId}`);
   return res;
 }
 
 export async function addExerciseActivityAction(formData: FormData) {
   await requireRole(["admin"]);
-  const lessonId = String(formData.get("lessonId") ?? "");
-  const title = String(formData.get("title") ?? "");
-  const questionType = String(formData.get("questionType") ?? "multiple_choice_pasan_to_id") as QuestionType;
-  const questionText = String(formData.get("questionText") ?? "");
-  const optionA = String(formData.get("optionA") ?? "");
-  const optionB = String(formData.get("optionB") ?? "");
-  const optionC = String(formData.get("optionC") ?? "");
-  const correctOption = (String(formData.get("correctOption") ?? "A") as "A" | "B" | "C");
-  const explanation = String(formData.get("explanation") ?? "");
+  const lessonId = field(formData, "lessonId");
+  const parsed = parseQuestionFormData(formData);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
 
-  const res = addExerciseQuestionActivity({
+  const res = await addExerciseQuestionActivity({
     lessonId,
-    title,
-    questionType,
-    questionText,
-    optionA,
-    optionB,
-    optionC,
-    correctOption,
-    explanation,
+    existingActivityId: field(formData, "existingActivityId") || undefined,
+    title: field(formData, "title"),
+    ...parsed.data,
   });
-  revalidatePath(`/admin/lessons/${lessonId}`);
+  revalidateCurriculum(`/admin/lessons/${lessonId}`);
   return res;
 }
 
@@ -119,8 +102,8 @@ export async function moveActivityAction(params: {
   direction: "up" | "down";
 }) {
   await requireRole(["admin"]);
-  const res = moveLessonActivityOrder(params);
-  revalidatePath(`/admin/lessons/${params.lessonId}`);
+  const res = await moveLessonActivityOrder(params);
+  revalidateCurriculum(`/admin/lessons/${params.lessonId}`);
   return res;
 }
 
@@ -129,17 +112,17 @@ export async function submitForValidationAction(params: {
   targetId: string;
 }) {
   const admin = await requireRole(["admin"]);
-  const res = submitContentForValidation({
-    type: params.type,
-    targetId: params.targetId,
+  const res = await submitContentForValidation({
+    ...params,
     adminId: admin.id,
-    adminName: admin.fullName,
   });
-  revalidatePath("/admin");
-  revalidatePath("/admin/units");
-  revalidatePath("/admin/quizzes");
-  revalidatePath(`/admin/lessons/${params.targetId}`);
-  revalidatePath("/validator");
+  revalidateCurriculum(
+    "/admin",
+    "/admin/units",
+    "/admin/quizzes",
+    `/admin/lessons/${params.targetId}`,
+    "/validator"
+  );
   return res;
 }
 
@@ -148,12 +131,14 @@ export async function cancelValidationAction(params: {
   targetId: string;
 }) {
   await requireRole(["admin"]);
-  const res = cancelPendingReviewSubmission(params);
-  revalidatePath("/admin");
-  revalidatePath("/admin/units");
-  revalidatePath("/admin/quizzes");
-  revalidatePath(`/admin/lessons/${params.targetId}`);
-  revalidatePath("/validator");
+  const res = await cancelPendingReviewSubmission(params);
+  revalidateCurriculum(
+    "/admin",
+    "/admin/units",
+    "/admin/quizzes",
+    `/admin/lessons/${params.targetId}`,
+    "/validator"
+  );
   return res;
 }
 
@@ -162,47 +147,39 @@ export async function publishContentAction(params: {
   targetId: string;
 }) {
   await requireRole(["admin"]);
-  const res = publishApprovedContent(params);
-  revalidatePath("/admin");
-  revalidatePath("/admin/units");
-  revalidatePath("/admin/quizzes");
-  revalidatePath(`/admin/lessons/${params.targetId}`);
-  revalidatePath("/learner");
+  const res = await publishApprovedContent(params);
+  revalidateCurriculum(
+    "/admin",
+    "/admin/units",
+    "/admin/quizzes",
+    `/admin/lessons/${params.targetId}`,
+    "/learner"
+  );
   return res;
 }
 
 export async function addQuizQuestionAction(formData: FormData) {
   await requireRole(["admin"]);
-  const quizId = String(formData.get("quizId") ?? "");
-  const primaryLessonId = String(formData.get("primaryLessonId") ?? "");
-  const questionText = String(formData.get("questionText") ?? "");
-  const optionA = String(formData.get("optionA") ?? "");
-  const optionB = String(formData.get("optionB") ?? "");
-  const optionC = String(formData.get("optionC") ?? "");
-  const correctOption = String(formData.get("correctOption") ?? "A") as "A" | "B" | "C";
-  const explanation = String(formData.get("explanation") ?? "");
+  const parsed = parseQuestionFormData(formData);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
 
-  const res = addQuizQuestionItem({
-    quizId,
-    primaryLessonId,
-    questionText,
-    optionA,
-    optionB,
-    optionC,
-    correctOption,
-    explanation,
+  const res = await addQuizQuestionItem({
+    quizId: field(formData, "quizId"),
+    primaryLessonId: field(formData, "primaryLessonId"),
+    ...parsed.data,
   });
-  revalidatePath("/admin/quizzes");
+  revalidateCurriculum("/admin/quizzes");
   return res;
 }
 
 export async function createValidatorAction(formData: FormData) {
   await requireRole(["admin"]);
-  const fullName = String(formData.get("fullName") ?? "");
-  const email = String(formData.get("email") ?? "");
-  const password = String(formData.get("password") ?? "");
-
-  const res = createValidatorProfile({ fullName, email, password });
+  const res = await createValidatorProfile({
+    fullName: field(formData, "fullName"),
+    email: field(formData, "email"),
+    password: field(formData, "password"),
+  });
+  revalidateTag("profiles", "max");
   revalidatePath("/admin/validators");
   revalidatePath("/admin");
   return res;
@@ -210,7 +187,8 @@ export async function createValidatorAction(formData: FormData) {
 
 export async function toggleValidatorAction(userId: string) {
   await requireRole(["admin"]);
-  const res = toggleValidatorStatus(userId);
+  const res = await toggleValidatorStatus(userId);
+  revalidateTag("profiles", "max");
   revalidatePath("/admin/validators");
   return res;
 }

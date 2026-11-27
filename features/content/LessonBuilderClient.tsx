@@ -25,11 +25,16 @@ import {
   updateLessonMetaAction,
   updateMaterialActivityAction,
 } from "@/actions/content";
+import {
+  formatAnswerKeySummary,
+  QUESTION_TYPE_LABELS,
+} from "@/lib/data/question-builder";
 import type { getPrivilegedContentDetail } from "@/lib/data/repository";
 import { Button, Card, ContentStatusBadge } from "@/components/ui/Primitives";
+import { QuestionComposerFields } from "@/features/content/QuestionComposerFields";
 
 type LessonDetail = Extract<
-  NonNullable<ReturnType<typeof getPrivilegedContentDetail>>,
+  NonNullable<Awaited<ReturnType<typeof getPrivilegedContentDetail>>>,
   { type: "lesson" }
 >;
 
@@ -346,15 +351,24 @@ export function LessonBuilderClient({ detail }: { detail: LessonDetail }) {
                       key={question.id}
                       className="p-3 rounded-control bg-surface-soft border border-border-subtle text-xs space-y-1"
                     >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-extrabold text-brand">
+                          {QUESTION_TYPE_LABELS[question.questionType]}
+                        </span>
+                        <span className="font-bold text-ink-soft">
+                          {question.points} poin
+                        </span>
+                      </div>
                       <p className="font-bold text-ink">
                         {qIdx + 1}. {question.questionText}
                       </p>
                       <p className="text-success font-bold flex items-center gap-1.5">
-                        <KeyRound className="w-3.5 h-3.5" aria-hidden="true" />
+                        <KeyRound className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                         Kunci:{" "}
-                        {answerKey && "correctOption" in answerKey
-                          ? `Opsi ${answerKey.correctOption}`
-                          : "Pasangan Mencocokkan"}
+                        {formatAnswerKeySummary(
+                          answerKey,
+                          question.questionData
+                        )}
                       </p>
                     </div>
                   ))}
@@ -512,84 +526,51 @@ export function LessonBuilderClient({ detail }: { detail: LessonDetail }) {
             <Card className="space-y-3">
               <h3 className="font-display text-base font-bold text-ink flex items-center gap-1.5">
                 <Plus className="w-4 h-4 text-brand" aria-hidden="true" />
-                Tambah Aktivitas Latihan
+                Tambah Soal / Aktivitas Latihan
               </h3>
               <form
                 action={(fd) =>
                   runAction(
                     () => addExerciseActivityAction(fd),
-                    "Aktivitas latihan baru ditambahkan."
+                    "Soal latihan berhasil ditambahkan."
                   )
                 }
-                className="space-y-2.5"
+                className="space-y-3"
               >
                 <input type="hidden" name="lessonId" value={lesson.id} />
+
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-extrabold uppercase text-ink-soft">
+                    Target Aktivitas Latihan
+                  </label>
+                  <select
+                    name="existingActivityId"
+                    disabled={isLockedReview}
+                    className="w-full h-10 px-3 rounded-control border border-border-control bg-canvas text-xs text-ink"
+                  >
+                    <option value="">
+                      + Buat Aktivitas Latihan Baru
+                    </option>
+                    {activities
+                      .filter((a) => a.activity.activityType === "exercise")
+                      .map((a) => (
+                        <option key={a.activity.id} value={a.activity.id}>
+                          Tambahkan ke: #{a.activity.orderNumber}{" "}
+                          {a.activity.title} ({a.questions.length} soal)
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
                 <input
                   name="title"
-                  required
                   disabled={isLockedReview}
-                  placeholder="Judul latihan (cth: Uji Kosakata)"
-                  className="w-full h-11 px-3 rounded-control border border-border-control bg-canvas text-sm"
+                  placeholder="Judul aktivitas baru (abaikan jika menambah ke aktivitas yang ada)"
+                  className="w-full h-10 px-3 rounded-control border border-border-control bg-canvas text-xs text-ink"
                 />
-                <select
-                  name="questionType"
-                  disabled={isLockedReview}
-                  className="w-full h-10 px-3 rounded-control border border-border-control bg-canvas text-xs"
-                >
-                  <option value="multiple_choice_pasan_to_id">
-                    Pilihan Ganda: Pasan ke Indonesia
-                  </option>
-                  <option value="multiple_choice_id_to_pasan">
-                    Pilihan Ganda: Indonesia ke Pasan
-                  </option>
-                </select>
-                <input
-                  name="questionText"
-                  required
-                  disabled={isLockedReview}
-                  placeholder="Pertanyaan soal..."
-                  className="w-full h-10 px-3 rounded-control border border-border-control bg-canvas text-xs"
-                />
-                <div className="grid grid-cols-3 gap-2">
-                  <input
-                    name="optionA"
-                    required
-                    disabled={isLockedReview}
-                    placeholder="Opsi A"
-                    className="h-10 px-2.5 rounded-control border border-border-control bg-canvas text-xs"
-                  />
-                  <input
-                    name="optionB"
-                    required
-                    disabled={isLockedReview}
-                    placeholder="Opsi B"
-                    className="h-10 px-2.5 rounded-control border border-border-control bg-canvas text-xs"
-                  />
-                  <input
-                    name="optionC"
-                    required
-                    disabled={isLockedReview}
-                    placeholder="Opsi C"
-                    className="h-10 px-2.5 rounded-control border border-border-control bg-canvas text-xs"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    name="correctOption"
-                    disabled={isLockedReview}
-                    className="h-10 px-3 rounded-control border border-border-control bg-canvas text-xs font-bold"
-                  >
-                    <option value="A">Kunci: A</option>
-                    <option value="B">Kunci: B</option>
-                    <option value="C">Kunci: C</option>
-                  </select>
-                  <input
-                    name="explanation"
-                    disabled={isLockedReview}
-                    placeholder="Pembahasan jawaban"
-                    className="h-10 px-3 rounded-control border border-border-control bg-canvas text-xs"
-                  />
-                </div>
+
+                <QuestionComposerFields disabled={isLockedReview} />
+
                 <Button
                   type="submit"
                   variant="primary"
@@ -597,7 +578,7 @@ export function LessonBuilderClient({ detail }: { detail: LessonDetail }) {
                   fullWidth
                   disabled={isLockedReview || isPending}
                 >
-                  + Tambah Latihan
+                  + Tambah Soal Latihan
                 </Button>
               </form>
             </Card>

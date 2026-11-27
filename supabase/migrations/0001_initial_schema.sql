@@ -11,8 +11,7 @@ CREATE TYPE question_type AS ENUM (
   'multiple_choice_pasan_to_id',
   'multiple_choice_id_to_pasan',
   'matching',
-  'fill_blank',
-  'dialogue'
+  'fill_blank'
 );
 CREATE TYPE review_status AS ENUM ('pending', 'approved', 'changes_requested');
 CREATE TYPE lesson_progress_status AS ENUM ('in_progress', 'completed');
